@@ -92,8 +92,9 @@ to be renewed and does it for you:
 ```bash
 24 0 * * * /usr/bin/python /opt/letsencrypt-nosudo/check_and_update_crt.py > /dev/null
 ```
+To get more information about the script and the original author, please refer to https://github.com/diafygi/letsencrypt-nosudo.
 
-# Automatic Apache Configuration script
+# Automatic Apache configuration script
 The bash script update_apache_certs.sh checks if a certificate has been renewed,
 copies it to the Apache configuration directory and restarts the webserver to load it.
 
@@ -118,4 +119,5 @@ letsencrypt cronjob we defined before:
 24 1 * * * /bin/bash /opt/letsencrypt-nosudo/update_apache_certs.sh
 ```
 
-To get more information about the script and the original author, please refer to https://github.com/diafygi/letsencrypt-nosudo.
+# TODO
+The revoke script had not been touched yet, It should also use the configuration file in the future.
