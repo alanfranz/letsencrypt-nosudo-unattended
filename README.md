@@ -19,7 +19,7 @@ the existing and the newly generated certificates.
 # Setup
 We will install the toolset in /opt/letsencrypt-nosudo.
 
-Login as root or create a root shell with sudo -s.
+Login as root or create a root shell with sudo -s or su -.
 
 Create a system user for the certificate generation:
 ```bash
@@ -90,11 +90,32 @@ crontab -e
 Add an entry like this to let the check run every day at 12:24 am. This checks if a certificate has
 to be renewed and does it for you:
 ```bash
-0 24 * * * /usr/bin/python /opt/letsencrypt-nosudo/check_and_update_crt.py > /dev/null
+24 0 * * * /usr/bin/python /opt/letsencrypt-nosudo/check_and_update_crt.py > /dev/null
 ```
 
-# TODO
-I will add a bash script, that runs as a root cronjob, that checks if a certificate has been renewed,
+# Automatic Apache Configuration script
+The bash script update_apache_certs.sh checks if a certificate has been renewed,
 copies it to the Apache configuration directory and restarts the webserver to load it.
+
+It is supposed to run as root cronjob, but you can use the attached sudoers.d file to add the script
+to the crontab of our created letsencrypt user.
+
+Login as root or create a root shell with sudo -s or su -.
+
+You might want to prevent editing of the script by any normal user:
+```bash
+chown root.root /opt/letsencrypt-nosudo/update_apache_certs.sh
+chmod 600 /opt/letsencrypt-nosudo/update_apache_certs.sh
+```
+
+Edit root's crontab:
+```bash
+crontab -e
+```
+Add an entry like this to let the check run every day at 01:24 am, leave a little time gap between the
+letsencrypt cronjob we defined before:
+```bash
+24 1 * * * /bin/bash /opt/letsencrypt-nosudo/update_apache_certs.sh
+```
 
 To get more information about the script and the original author, please refer to https://github.com/diafygi/letsencrypt-nosudo.
