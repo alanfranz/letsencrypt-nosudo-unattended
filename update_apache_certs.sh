@@ -65,7 +65,7 @@ for sslcert in $sslcerts; do
 done
 
 #restart apache if anything had been changed
-if [ $anything_changed ]; then
+if [ $anything_changed -eq 1 ]; then
   #check if we are on systemd enabled host
   systemctl=$(which systemctl)
   if [ $? -eq 0 ]; then
