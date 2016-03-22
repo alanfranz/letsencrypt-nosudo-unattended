@@ -1,9 +1,17 @@
 #!/usr/bin/env python
 import argparse, subprocess, json, os, urllib2, sys, base64, binascii, time, \
-    hashlib, tempfile, re, copy, textwrap
+    hashlib, tempfile, re, copy, textwrap, ConfigParser
 
 
-def sign_csr(pubkey, csr, email=None, file_based=False):
+def sign_csr(config, csr):
+    file_based = True
+    pubkey = config['publicUserKeyFile']
+    email = config['mailAddress']
+    
+    privkey = config['privateUserKeyFile']
+    workdir = config['workDir']
+    challengedir = config['acmeChallengeDir']
+    
     """Use the ACME protocol to get an ssl certificate signed by a
     certificate authority.
 
@@ -29,6 +37,12 @@ def sign_csr(pubkey, csr, email=None, file_based=False):
     def _b64(b):
         "Shortcut function to go from bytes to jwt base64 string"
         return base64.urlsafe_b64encode(b).replace("=", "")
+
+    # get absolute path of csr
+    csr = os.path.abspath(csr)
+    
+    # change to workdir
+    os.chdir(workdir)
 
     # Step 1: Get account public key
     sys.stderr.write("Reading pubkey file...\n")
@@ -160,23 +174,41 @@ def sign_csr(pubkey, csr, email=None, file_based=False):
     csr_file_sig = tempfile.NamedTemporaryFile(dir=".", prefix="cert_", suffix=".sig")
     csr_file_sig_name = os.path.basename(csr_file_sig.name)
 
-    # Step 5: Ask the user to sign the registration and requests
-    sys.stderr.write("""\
-STEP 2: You need to sign some files (replace 'user.key' with your user private key).
 
-openssl dgst -sha256 -sign user.key -out {0} {1}
-{2}
-openssl dgst -sha256 -sign user.key -out {3} {4}
+    sys.stderr.write("STEP 2: Signing some files for you...\n")
 
-""".format(
-    reg_file_sig_name, reg_file_name,
-    "\n".join("openssl dgst -sha256 -sign user.key -out {0} {1}".format(i['sig_name'], i['file_name']) for i in ids),
-    csr_file_sig_name, csr_file_name))
+    # Step 5: Sign the registration and requests
 
-    stdout = sys.stdout
-    sys.stdout = sys.stderr
-    raw_input("Press Enter when you've run the above commands in a new terminal window...")
-    sys.stdout = stdout
+    signfiles = [ [reg_file_sig_name, reg_file_name ] ]
+    for i in ids:
+	signfiles.append([ i['sig_name'], i['file_name'] ])
+    signfiles.append([ csr_file_sig_name, csr_file_name ]);
+    
+    for signfile in signfiles:
+	sys.stderr.write("Signing " + signfile[0] + " to " + signfile[1] + "...\n")
+	proc = subprocess.Popen(["openssl", "dgst", "-sha256", "-sign", privkey, "-out", signfile[0], signfile[1]],
+    	    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+	out, err = proc.communicate()
+	if proc.returncode != 0:
+    	    raise IOError("Error signing {0} with private key {1}".format(signfile[0], privkey))
+
+#    # Step 5: Ask the user to sign the registration and requests
+#    sys.stderr.write("""\
+#STEP 2: You need to sign some files (replace 'user.key' with your user private key).
+#
+#openssl dgst -sha256 -sign user.key -out {0} {1}
+#{2}
+#openssl dgst -sha256 -sign user.key -out {3} {4}
+#
+#""".format(
+#    reg_file_sig_name, reg_file_name,
+#    "\n".join("openssl dgst -sha256 -sign user.key -out {0} {1}".format(i['sig_name'], i['file_name']) for i in ids),
+#    csr_file_sig_name, csr_file_name))
+#
+#    stdout = sys.stdout
+#    sys.stdout = sys.stderr
+#    raw_input("Press Enter when you've run the above commands in a new terminal window...")
+#    sys.stdout = stdout
 
     # Step 6: Load the signatures
     reg_file_sig.seek(0)
@@ -270,63 +302,87 @@ openssl dgst -sha256 -sign user.key -out {3} {4}
             "data": keyauthorization,
         })
 
-    # Step 9: Ask the user to sign the challenge responses
-    sys.stderr.write("""\
-STEP 3: You need to sign some more files (replace 'user.key' with your user private key).
+    # Step 9: Sign the challenge responses
 
-{0}
+    sys.stderr.write("STEP 3: Signing some more files for you...\n")
+    signfiles = []
+    for i in tests:
+	signfiles.append([ i['sig_name'], i['file_name'] ])
+    
+    for signfile in signfiles:
+	proc = subprocess.Popen(["openssl", "dgst", "-sha256", "-sign", privkey, "-out", signfile[0], signfile[1]],
+    	    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+	out, err = proc.communicate()
+	sys.stderr.write("Signing " + signfile[0] + " to " + signfile[1] + "...\n")
+	if proc.returncode != 0:
+    	    raise IOError("Error signing {0} with private key {1}".format(signfile[0], privkey))
 
-""".format(
-    "\n".join("openssl dgst -sha256 -sign user.key -out {0} {1}".format(
-        i['sig_name'], i['file_name']) for i in tests)))
-
-    stdout = sys.stdout
-    sys.stdout = sys.stderr
-    raw_input("Press Enter when you've run the above commands in a new terminal window...")
-    sys.stdout = stdout
+#    # Step 9: Ask the user to sign the challenge responses
+#
+#    sys.stderr.write("""\
+#STEP 3: You need to sign some more files (replace 'user.key' with your user private key).
+#
+#{0}
+#
+#""".format(
+#    "\n".join("openssl dgst -sha256 -sign user.key -out {0} {1}".format(
+#        i['sig_name'], i['file_name']) for i in tests)))
+#
+#    stdout = sys.stdout
+#    sys.stdout = sys.stderr
+#    raw_input("Press Enter when you've run the above commands in a new terminal window...")
+#    sys.stdout = stdout
 
     # Step 10: Load the response signatures
     for n, i in enumerate(ids):
         tests[n]['sig'].seek(0)
         tests[n]['sig64'] = _b64(tests[n]['sig'].read())
 
-    # Step 11: Ask the user to host the token on their server
+    # Step 11: Serve the token on local web server
+
     for n, i in enumerate(ids):
-        if file_based:
-            sys.stderr.write("""\
-STEP {0}: Please update your server to serve the following file at this URL:
+	token = open(challengedir + "/" + os.path.basename(responses[n]['uri']), "w")
+	token.write(responses[n]['data'])
+	token.close()
+	#format(n + 4, i['domain'], responses[n]['uri'], responses[n]['data']))
 
---------------
-URL: http://{1}/{2}
-File contents: \"{3}\"
---------------
-
-Notes:
-- Do not include the quotes in the file.
-- The file should be one line without any spaces.
-
-""".format(n + 4, i['domain'], responses[n]['uri'], responses[n]['data']))
-
-            stdout = sys.stdout
-            sys.stdout = sys.stderr
-            raw_input("Press Enter when you've got the file hosted on your server...")
-            sys.stdout = stdout
-        else:
-            sys.stderr.write("""\
-STEP {0}: You need to run this command on {1} (don't stop the python command until the next step).
-
-sudo python -c "import BaseHTTPServer; \\
-    h = BaseHTTPServer.BaseHTTPRequestHandler; \\
-    h.do_GET = lambda r: r.send_response(200) or r.end_headers() or r.wfile.write('{2}'); \\
-    s = BaseHTTPServer.HTTPServer(('0.0.0.0', 80), h); \\
-    s.serve_forever()"
-
-""".format(n + 4, i['domain'], responses[n]['data']))
-
-            stdout = sys.stdout
-            sys.stdout = sys.stderr
-            raw_input("Press Enter when you've got the python command running on your server...")
-            sys.stdout = stdout
+#    # Step 11: Ask the user to host the token on their server
+#    for n, i in enumerate(ids):
+#        if file_based:
+#            sys.stderr.write("""\
+#STEP {0}: Please update your server to serve the following file at this URL:
+#
+#--------------
+#URL: http://{1}/{2}
+#File contents: \"{3}\"
+#--------------
+#
+#Notes:
+#- Do not include the quotes in the file.
+#- The file should be one line without any spaces.
+#
+#""".format(n + 4, i['domain'], responses[n]['uri'], responses[n]['data']))
+#
+#            stdout = sys.stdout
+#	     sys.stdout = sys.stderr
+#    	     raw_input("Press Enter when you've got the file hosted on your server...")
+#    	     sys.stdout = stdout
+#        else:
+#            sys.stderr.write("""\
+#STEP {0}: You need to run this command on {1} (don't stop the python command until the next step).
+#
+#sudo python -c "import BaseHTTPServer; \\
+#    h = BaseHTTPServer.BaseHTTPRequestHandler; \\
+#    h.do_GET = lambda r: r.send_response(200) or r.end_headers() or r.wfile.write('{2}'); \\
+#    s = BaseHTTPServer.HTTPServer(('0.0.0.0', 80), h); \\
+#    s.serve_forever()"
+#
+#""".format(n + 4, i['domain'], responses[n]['data']))
+#
+#            stdout = sys.stdout
+#            sys.stdout = sys.stderr
+#            raw_input("Press Enter when you've got the python command running on your server...")
+#            sys.stdout = stdout
 
         # Step 12: Let the CA know you're ready for the challenge
         sys.stderr.write("Requesting verification for {0}...\n".format(i['domain']))
@@ -397,10 +453,15 @@ sudo python -c "import BaseHTTPServer; \\
     # Step 15: Convert the signed cert from DER to PEM
     sys.stderr.write("Certificate signed!\n")
 
-    if file_based:
-        sys.stderr.write("You can remove the acme-challenge file from your webserver now.\n")
-    else:
-        sys.stderr.write("You can stop running the python command on your server (Ctrl+C works).\n")
+
+    # Remove challenge files
+    for n, i in enumerate(ids):
+	os.remove(challengedir + "/" + os.path.basename(responses[n]['uri']))
+    
+#    if file_based:
+#        sys.stderr.write("You can remove the acme-challenge file from your webserver now.\n")
+#    else:
+#        sys.stderr.write("You can stop running the python command on your server (Ctrl+C works).\n")
 
     signed_der64 = base64.b64encode(signed_der)
     signed_pem = """\
@@ -408,6 +469,10 @@ sudo python -c "import BaseHTTPServer; \\
 {0}
 -----END CERTIFICATE-----
 """.format("\n".join(textwrap.wrap(signed_der64, 64)))
+
+    certFile = open(os.path.splitext(csr)[0] + ".crt", "w")
+    certFile.write(signed_pem)
+    certFile.close()
 
     return signed_pem
 
@@ -433,16 +498,25 @@ $ openssl genrsa 4096 > user.key
 $ openssl rsa -in user.key -pubout > user.pub
 $ openssl genrsa 4096 > domain.key
 $ openssl req -new -sha256 -key domain.key -subj "/CN=example.com" > domain.csr
-$ python sign_csr.py --public-key user.pub domain.csr > signed.crt
+$ python sign_csr.py domain.csr > signed.crt
 --------------
 
 """)
-    parser.add_argument("-p", "--public-key", required=True, help="path to your account public key")
-    parser.add_argument("-e", "--email", default=None, help="contact email, default is webmaster@<shortest_domain>")
-    parser.add_argument("-f", "--file-based", action='store_true', help="if set, a file-based response is used")
     parser.add_argument("csr_path", help="path to your certificate signing request")
-
+    
     args = parser.parse_args()
-    signed_crt = sign_csr(args.public_key, args.csr_path, email=args.email, file_based=args.file_based)
+
+    Config = ConfigParser.ConfigParser()
+    Config.read('letsencrypt-nosudo.conf')
+    
+    config = {}
+    config['mailAddress'] = Config.get('main', 'mailAddress')
+    config['publicUserKeyFile'] = Config.get('keys', 'publicUserKeyFile')
+    config['privateUserKeyFile'] = Config.get('keys', 'privateUserKeyFile')
+    config['workDir'] = Config.get('directories', 'workDir')
+    config['acmeChallengeDir'] = Config.get('directories', 'acmeChallengeDir')
+    
+    signed_crt = sign_csr(config, args.csr_path)
+
     sys.stdout.write(signed_crt)
 

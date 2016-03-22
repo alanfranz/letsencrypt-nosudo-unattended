@@ -54,3 +54,6 @@ docs/_build/
 target/
 
 certs/
+letsencrypt-nosudo.conf
+www/
+tmp/

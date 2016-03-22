@@ -1,0 +1,17 @@
+[main]
+mailAddress=webmaster@example.org
+domains=www.example.org
+	mail.example.org
+	www.anotherdomain.berlin
+
+[keys]
+publicUserKeyFile=/opt/letsencrypt-nosudo/certs/user.pub
+privateUserKeyFile=/opt/letsencrypt-nosudo/certs/user.key
+
+[directories]
+workDir=/opt/letsencrypt-nosudo/tmp
+acmeChallengeDir=/opt/letsencrypt-nosudo/www
+certDir=/opt/letsencrypt-nosudo/certs
+
+[renew]
+renewBeforeDaysLeft=14
