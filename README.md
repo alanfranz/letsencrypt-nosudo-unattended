@@ -31,7 +31,7 @@ Get the code, create needed directories and set the user rights (assuming your
 webserver is running with group www-data):
 ```bash
 cd /opt
-svn clone https://github.com/coolduke/letsencrypt-nosudo
+git clone https://github.com/coolduke/letsencrypt-nosudo
 mkdir -pm760 /opt/letsencrypt-nosudo/{certs/account,tmp,www}
 chown -R letsencrypt.letsencrypt /opt/letsencrypt-nosudo/
 chgrp www-data /opt/letsencrypt-nosudo/{,www}
