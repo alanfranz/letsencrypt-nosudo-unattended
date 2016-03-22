@@ -507,7 +507,7 @@ $ python sign_csr.py domain.csr > signed.crt
     args = parser.parse_args()
 
     Config = ConfigParser.ConfigParser()
-    Config.read('letsencrypt-nosudo.conf')
+    Config.read(os.path.dirname(os.path.realpath(sys.argv[0])) + '/letsencrypt-nosudo.conf')
     
     config = {}
     config['mailAddress'] = Config.get('main', 'mailAddress')

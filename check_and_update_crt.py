@@ -66,25 +66,24 @@ def check_and_update_crt(config):
 	os.chmod(csrFileName, stat.S_IREAD | stat.S_IWRITE);
 
         sys.stdout.write("Running sign_csr.py...\n")
-#	proc = subprocess.Popen(["python", scriptPath + "/sign_csr.py", csrFileName ],
-#	stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-#	out, err = proc.communicate()
-#    	if proc.returncode != 0:
-#    	    raise IOError("Error running {0}/sign_csr.py when requesting certificate for {1}\nstdout: {2}\n stderr: {3}\n".format(scriptPath, domain, out, err))
-#
-#	if os.path.isfile(certFile):
-#    	    sys.stderr.write("New certificate stored at " + certFile)
-#    	else:
-#    	    sys.stdout.write("Something strange happened - sign_csr.py returned no error but " + certFile + " does not exist.")
-#
-#	os.chmod(certFile, stat.S_IREAD | stat.S_IWRITE);
+	proc = subprocess.Popen(["python", scriptPath + "/sign_csr.py", csrFileName ],
+	stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+	out, err = proc.communicate()
+    	if proc.returncode != 0:
+	    raise IOError("Error running {0}/sign_csr.py when requesting certificate for {1}\nstdout: {2}\n stderr: {3}\n".format(scriptPath, domain, out, err))
+	if os.path.isfile(certFile):
+    	    sys.stdout.write("New certificate stored at " + certFile + "\n")
+    	else:
+    	    sys.stderr.write("Something strange happened - sign_csr.py returned no error but " + certFile + " does not exist.\n")
+
+	os.chmod(certFile, stat.S_IREAD | stat.S_IWRITE);
 
     return
 
 if __name__ == "__main__":
 
     Config = ConfigParser.ConfigParser()
-    Config.read('letsencrypt-nosudo.conf')
+    Config.read(os.path.dirname(os.path.realpath(sys.argv[0])) + '/letsencrypt-nosudo.conf')
     
     config = {}
     config['certDir'] = Config.get('directories', 'certDir')
