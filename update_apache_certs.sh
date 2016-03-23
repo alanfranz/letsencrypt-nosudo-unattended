@@ -34,7 +34,7 @@ for sslcert in $sslcerts; do
 
   #check if common names match domain name
   [ "$oldcert_cn" == "$domain" ] || { >&2 echo "CN of old certificate $oldcert_cn does not match domain name $domain"; continue; }
-#  [ "$newcert_cn" == "$domain" ] || { >&2 echo "CN of new certificate $newcert_cn does not match domain name $domain"; continue; }
+  [ "$newcert_cn" == "$domain" ] || { >&2 echo "CN of new certificate $newcert_cn does not match domain name $domain"; continue; }
 
   #get expiration dates of old and new certificates
   oldcert_enddate_string=$(openssl x509 -noout -enddate -in $sslcert | cut -d= -f2; exit ${PIPESTATUS[0]})
