@@ -19,6 +19,7 @@ the existing and the newly generated certificates.
 # Setup
 We will install the toolset in /opt/letsencrypt-nosudo.
 
+## Get the scripts
 Login as root or create a root shell with sudo -s or su -.
 
 Create a system user for the certificate generation:
@@ -31,13 +32,14 @@ Get the code, create needed directories and set the user rights (assuming your
 webserver is running with group www-data):
 ```bash
 cd /opt
-git clone https://github.com/coolduke/letsencrypt-nosudo
+git clone https://github.com/coolduke/letsencrypt-nosudo-unattended /opt/letsencrypt-nosudo
 mkdir -pm760 /opt/letsencrypt-nosudo/{certs/account,tmp,www}
 chown -R letsencrypt.letsencrypt /opt/letsencrypt-nosudo/
 chgrp www-data /opt/letsencrypt-nosudo/{,www}
 ```
 
-Setup Apache 2.4 (nginx documentation will follow later). This will add an alias called
+## Setup Apache 2.4
+This will add an alias called
 /.well-known/acme-challenge to all virtual hosts if there is no redirect defined.
 These commands should work in the default configuration of the latest Debian and Ubuntu
 versions. You may need to modify it to let it run properly on your setup:
@@ -47,6 +49,23 @@ a2enconf letsencrypt
 systemctl reload apache2
 ```
 
+## Setup Nginx
+Since nginx does not support global aliases, you will have to enable it for every virtual host.
+Using the Debian way, a snippet directory is being used to include small parts of configuration
+for multiple virtual hosts. So we create a link to the snippet at that directory first:
+```bash
+ln -s /opt/letsencrypt-nosudo/webserver-config/letsencrypt-nginx.conf /etc/nginx/snippets/letsencrypt.conf
+```
+Now add the following line to every HTTP server block you want to have a certificate for:
+```bash
+include "/etc/nginx/snippets/letsencrypt.conf";
+```
+And reload nginx:
+```bash
+systemctl reload nginx
+```
+
+## Test challenge directory
 Check the availability of the challenge directory by putting a test file into the target
 directory and test it in your browser with all URLs you want to get certificates for:
 ```bash
@@ -55,6 +74,7 @@ echo "Hello World" > /opt/letsencrypt-nosudo/www/test.txt
 ```
 Note that this test has to be successful, otherwise your domains cannot be authenticated.
 
+## Configure letsencrypt-nosudo
 Login as user letsencrypt:
 ```bash
 su - letsencrypt
@@ -117,6 +137,31 @@ Add an entry like this to let the check run every day at 01:24 am, leave a littl
 letsencrypt cronjob we defined before:
 ```bash
 24 1 * * * /bin/bash /opt/letsencrypt-nosudo/update_apache_certs.sh
+```
+
+# Automatic Nginx configuration script
+The bash script update_nginx_certs.sh checks if a certificate has been renewed,
+copies it to the Nginx configuration directory and restarts the webserver to load it.
+
+It is supposed to run as root cronjob, but you can use the attached sudoers.d file to add the script
+to the crontab of our created letsencrypt user.
+
+Login as root or create a root shell with sudo -s or su -.
+
+You might want to prevent editing of the script by any normal user:
+```bash
+chown root.root /opt/letsencrypt-nosudo/update_nginx_certs.sh
+chmod 600 /opt/letsencrypt-nosudo/update_nginx_certs.sh
+```
+
+Edit root's crontab:
+```bash
+crontab -e
+```
+Add an entry like this to let the check run every day at 01:24 am, leave a little time gap between the
+letsencrypt cronjob we defined before:
+```bash
+24 1 * * * /bin/bash /opt/letsencrypt-nosudo/update_nginx_certs.sh
 ```
 
 # TODO

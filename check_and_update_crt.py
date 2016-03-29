@@ -49,7 +49,7 @@ def check_and_update_crt(config):
 
         sys.stdout.write("Generating new key...\n")
         keyFileName = certDir + "/" + domain + ".key"
-        proc = subprocess.Popen(["openssl", "genrsa", "-out", keyFileName, "4096" ],
+        proc = subprocess.Popen(["openssl", "genrsa", "-out", keyFileName, "2048" ],
 	stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 	out, err = proc.communicate()
     	if proc.returncode != 0:
