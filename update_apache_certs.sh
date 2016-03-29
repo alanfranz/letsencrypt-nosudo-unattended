@@ -52,8 +52,8 @@ for sslcert in $sslcerts; do
   [ $oldcert_enddate -gt $newcert_enddate ] && { >&2 echo "Old certificate $sslcert expires after new certificate $LETSENCRYPT_CERTDIR/$domain.crt"; continue; }
 
   #check if new key belongs to new certificate by comparing their md5 hashes
-  newcert_md5hash=$(openssl x509 -in $LETSENCRYPT_CERTDIR/$domain.crt | openssl md5)
-  newkey_md5hash=$(openssl rsa -in $LETSENCRYPT_CERTDIR/$domain.key 2>/dev/null | openssl md5)
+  newcert_md5hash=$(openssl x509 -in $LETSENCRYPT_CERTDIR/$domain.crt -noout -modulus | openssl md5)
+  newkey_md5hash=$(openssl rsa -in $LETSENCRYPT_CERTDIR/$domain.key -noout -modulus 2>/dev/null | openssl md5)
   [ "$newcert_md5hash" == "$newkey_md5hash" ] || { >&2 echo "Key $LETSENCRYPT_CERTDIR/$domain.key does not belong to certificate $LETSENCRYPT_CERTDIR/$domain.crt"; continue; }
 
   #copy certificates to apache ssl config dir
