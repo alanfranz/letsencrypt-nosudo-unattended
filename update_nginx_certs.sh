@@ -9,8 +9,6 @@ LETSENCRYPT_INTERMEDIATE_DIR=/opt/letsencrypt-nosudo/intermediates
 #get a list of configured ssl vhosts
 sslcerts=$(grep "ssl_certificate " $NGINX_CONFDIR/* | awk '{print $3}' | sed 's/;$//' | sort | uniq)
 
-echo $sslcerts
-
 #track if we have to restart apache
 anything_changed=0
 
