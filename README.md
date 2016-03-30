@@ -33,7 +33,7 @@ webserver is running with group www-data):
 ```bash
 cd /opt
 git clone https://github.com/coolduke/letsencrypt-nosudo-unattended /opt/letsencrypt-nosudo
-mkdir -pm770 /opt/letsencrypt-nosudo/{certs/account,tmp,www}
+mkdir -pm750 /opt/letsencrypt-nosudo/{certs/account,tmp,www}
 chown -R letsencrypt.letsencrypt /opt/letsencrypt-nosudo/
 chgrp www-data /opt/letsencrypt-nosudo/{,www}
 ```
