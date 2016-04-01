@@ -1,1 +1,2 @@
 letsencrypt  ALL=NOPASSWD: /bin/bash /opt/letsencrypt-nosudo/update_apache_certs.sh
+letsencrypt  ALL=NOPASSWD: /bin/bash /opt/letsencrypt-nosudo/update_nginx_certs.sh
