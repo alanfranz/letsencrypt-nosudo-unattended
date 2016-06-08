@@ -40,7 +40,7 @@ for sslcert in $sslcerts; do
     #ignore cert if md5 sums match or are empty
      oldcert_md5sum=$(md5sum $sslcert | cut -d" " -f1)
      newcert_md5sum=$(cat $LETSENCRYPT_CERTDIR/$domain.crt $intermediate_cert | md5sum | cut -d" " -f1)
-     if [ -z $oldcert_md5sum ] || [ -z $newcert_md5sum ] || [ "$oldcert_md5sum" == "$newcert_md5sum" ]; then
+     if [ -z $oldcert_md5sum ] || [ -z $newcert_md5sum ] || [ "$oldcert_md5sum" = "$newcert_md5sum" ]; then
        continue
      fi
 
