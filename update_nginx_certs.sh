@@ -33,7 +33,7 @@ for sslcert in $sslcerts; do
       break
     fi
   done
-  [ "$intermediate_cert" == "" ] && { echo "Unable to find intermediate certificate $issuer for $LETSENCRYPT_CERTDIR/$domain.crt"; continue; }
+  [ "$intermediate_cert" = "" ] && { echo "Unable to find intermediate certificate $issuer for $LETSENCRYPT_CERTDIR/$domain.crt"; continue; }
 
   #if cert already exists do some checks
   if [ -e $sslcert ]; then
@@ -51,8 +51,8 @@ for sslcert in $sslcerts; do
      [ $? -eq 0 ] || { >&2 echo "Error while getting common name of $LETSENCRYPT_CERTDIR/$domain.crt"; continue; }
 
      #check if common names match domain name
-     [ "$oldcert_cn" == "$domain" ] || { >&2 echo "CN of old certificate $oldcert_cn does not match domain name $domain"; continue; }
-     [ "$newcert_cn" == "$domain" ] || { >&2 echo "CN of new certificate $newcert_cn does not match domain name $domain"; continue; }
+     [ "$oldcert_cn" = "$domain" ] || { >&2 echo "CN of old certificate $oldcert_cn does not match domain name $domain"; continue; }
+     [ "$newcert_cn" = "$domain" ] || { >&2 echo "CN of new certificate $newcert_cn does not match domain name $domain"; continue; }
 
      #get expiration dates of old and new certificates
      oldcert_enddate_string=$(openssl x509 -noout -enddate -in $sslcert | cut -d= -f2; exit ${PIPESTATUS[0]})
@@ -74,7 +74,7 @@ for sslcert in $sslcerts; do
   #check if new key belongs to new certificate by comparing their md5 hashes
   newcert_md5hash=$(openssl x509 -in $LETSENCRYPT_CERTDIR/$domain.crt -noout -modulus | openssl md5)
   newkey_md5hash=$(openssl rsa -in $LETSENCRYPT_CERTDIR/$domain.key -noout -modulus 2>/dev/null | openssl md5)
-  [ "$newcert_md5hash" == "$newkey_md5hash" ] || { >&2 echo "Key $LETSENCRYPT_CERTDIR/$domain.key does not belong to certificate $LETSENCRYPT_CERTDIR/$domain.crt"; continue; }
+  [ "$newcert_md5hash" = "$newkey_md5hash" ] || { >&2 echo "Key $LETSENCRYPT_CERTDIR/$domain.key does not belong to certificate $LETSENCRYPT_CERTDIR/$domain.crt"; continue; }
 
   #copy certificates to nginx ssl config dir
   cp -a $LETSENCRYPT_CERTDIR/$domain.key $NGINX_CERTDIR/
