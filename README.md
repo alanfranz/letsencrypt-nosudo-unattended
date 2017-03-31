@@ -84,7 +84,7 @@ Configure the script - if you use the paths from this setup guide you just have 
 set your mail address and the domains you want to use here. If you already have a user
 key-pair for Letsencrypt, copy it to the configured location:
 ```bash
-cd /opt/letsencrypt
+cd /opt/letsencrypt-nosudo
 cp letsencrypt-nosudo.conf.skel letsencrypt-nosudo.conf
 editor letsencrypt-nosudo.conf
 ```
